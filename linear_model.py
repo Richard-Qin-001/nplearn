@@ -6,7 +6,7 @@ class LinearRegression():
         self.intercept_ = None
         self.coef_ = None
     
-    def fit(self, X : np.ndarray, y  : np.ndarray) -> None:
+    def fit(self, X : np.ndarray, y  : np.ndarray) -> 'LinearRegression':
         if y.ndim == 1:
             y = y.reshape(-1, 1)
         ones = np.ones((X.shape[0], 1))
@@ -18,7 +18,7 @@ class LinearRegression():
         self.coef_ = self.theta[1:, 0]
         return self
 
-    def predict(self, X : np.ndarray) -> np.array:
+    def predict(self, X : np.ndarray) -> np.ndarray:
         if self.theta is None:
             raise ValueError("LinearRegression needs data to fit. Please use **.fit(self, X : np.array, y : np.array) to let the regressor to calculate parameters first.")
         ones = np.ones((X.shape[0], 1))
@@ -28,7 +28,7 @@ class LinearRegression():
     
     def score(self, X : np.ndarray, y : np.ndarray) -> float:
         if self.theta is None:
-            raise ValueError("LinearRegression needs data to fit. Please use **.fit(self, X : np.array, y : np.array) to let the regressor to calculate parameters first.")
+            raise ValueError("LinearRegression needs data to fit. Please use .fit(X : np.array, y : np.array) to let the regressor to calculate parameters first.")
         if y.ndim == 1:
             y_true = y.reshape(-1, 1)
         else:
@@ -45,7 +45,7 @@ class RidgeRegression(LinearRegression):
         super().__init__()
         self.alpha = alpha
 
-    def fit(self, X : np.ndarray = None, y : np.ndarray = None) -> None:
+    def fit(self, X : np.ndarray = None, y : np.ndarray = None) -> 'RidgeRegression':
         if y.ndim == 1:
             y = y.reshape(-1, 1)
         ones = np.ones((X.shape[0], 1))
@@ -62,13 +62,13 @@ class RidgeRegression(LinearRegression):
     
     def predict(self, X : np.ndarray) -> np.ndarray:
         if self.theta is None:
-            raise ValueError("RidgeRegression needs data to fit. Please use **.fit(self, X : np.array, y : np.array) to let the regressor to calculate parameters first.")
+            raise ValueError("RidgeRegression needs data to fit. Please use .fit(X : np.array, y : np.array) to let the regressor to calculate parameters first.")
         ones = np.ones((X.shape[0], 1))
         X_b = np.hstack((ones, X))
 
         y_pred = X_b @ self.theta
 
-        return y_pred
+        return y_pred.flatten()
     
     def score(self, X, y):
         return super().score(X, y)
@@ -81,7 +81,7 @@ class LassoRegression(LinearRegression):
         self.max_iter = max_iter
         self.tol = tol
         
-    def fit(self, X : np.ndarray = None, y : np.ndarray = None) -> None:
+    def fit(self, X : np.ndarray = None, y : np.ndarray = None) -> 'LassoRegression':
         if y.ndim == 1:
             y = y.reshape(-1, 1)
         n_samples, n_features = X.shape
@@ -106,7 +106,7 @@ class LassoRegression(LinearRegression):
                     else:
                         new_coef_j = 0.0
                 self.coef_[j] = new_coef_j
-            self.intercept_ = np.mean(y - X @ self.coef_)
+            self.intercept_ = np.mean(y - X @ self.coef_).item()
             coef_change = np.linalg.norm(self.coef_ - old_coef)
             if coef_change < self.tol:
                 break
@@ -114,9 +114,55 @@ class LassoRegression(LinearRegression):
     
     def predict(self, X):
         if self.coef_ is None:
-            raise ValueError("LassoRegression needs data to fit. Please use **.fit(self, X : np.array, y : np.array) to let the regressor to calculate parameters first.")
+            raise ValueError("LassoRegression needs data to fit. Please use .fit(X : np.array, y : np.array) to let the regressor to calculate parameters first.")
         y_pred = self.intercept_ + X @ self.coef_
         return y_pred.flatten()
 
+    def score(self, X, y):
+        return super().score(X, y)
+
+class ElasticNet(LassoRegression):
+    def __init__(self, alpha: float = 1.0, l1_ratio: float = 0.5, max_iter: int = 1000, tol: float = 1e-4, *args, **kwargs):
+        super().__init__(alpha=alpha, max_iter=max_iter, tol=tol)
+        self.l1_ratio = l1_ratio
+        if not (0.0 <= l1_ratio <= 1.0):
+             raise ValueError("l1_ratio must be between 0.0 and 1.0.")
+    def fit(self, X : np.ndarray, y : np.ndarray) -> "ElasticNet":
+        if y.ndim == 1:
+            y = y.reshape(-1, 1)
+        n_samples, n_features = X.shape
+        self.coef_ = np.zeros((n_features, 1))
+        self.intercept_ = np.mean(y).item()
+        lambda_l1 = self.alpha * self.l1_ratio
+        lambda_l2 = self.alpha * (1.0 - self.l1_ratio)
+        for iteration in range(self.max_iter):
+            old_coef = self.coef_.copy()
+            self.intercept_ = np.mean(y - X @ self.coef_).item()
+
+            for j in range(n_features):
+                y_pred = self.intercept_ + X @ self.coef_
+                residual = y - y_pred + X[:, j].reshape(-1, 1) * self.coef_[j]
+                z = np.sum(X[:, j].reshape(-1, 1) * residual)
+                denominator = np.sum(X[:, j] ** 2) + lambda_l2
+                
+                if denominator == 0:
+                    new_coef_j = 0.0
+                else:
+                    z_prime = z
+                    if z_prime > lambda_l1:
+                        new_coef_j = (z_prime - lambda_l1) / denominator
+                    elif z_prime < -lambda_l1:
+                        new_coef_j = (z_prime + lambda_l1) / denominator
+                    else:
+                        new_coef_j = 0.0
+                
+                self.coef_[j] = new_coef_j
+            coef_change = np.linalg.norm(self.coef_ - old_coef)
+            if coef_change < self.tol:
+                break
+        return self
+    
+    def predict(self, X):
+        return super().predict(X)
     def score(self, X, y):
         return super().score(X, y)
