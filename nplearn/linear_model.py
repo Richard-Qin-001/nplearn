@@ -70,7 +70,7 @@ class RidgeRegression(LinearRegression):
 
         return y_pred.flatten()
     
-    def score(self, X, y):
+    def score(self, X : np.ndarray, y : np.ndarray) -> float:
         return super().score(X, y)
     
 
@@ -112,13 +112,13 @@ class LassoRegression(LinearRegression):
                 break
         return self
     
-    def predict(self, X):
+    def predict(self, X : np.ndarray) -> np.ndarray:
         if self.coef_ is None:
             raise ValueError("LassoRegression needs data to fit. Please use .fit(X : np.array, y : np.array) to let the regressor to calculate parameters first.")
         y_pred = self.intercept_ + X @ self.coef_
         return y_pred.flatten()
 
-    def score(self, X, y):
+    def score(self, X : np.ndarray, y : np.ndarray) -> float:
         return super().score(X, y)
 
 class ElasticNet(LassoRegression):
@@ -162,7 +162,66 @@ class ElasticNet(LassoRegression):
                 break
         return self
     
-    def predict(self, X):
+    def predict(self, X : np.ndarray) -> np.ndarray:
         return super().predict(X)
-    def score(self, X, y):
+    def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        return super().score(X, y)
+
+class HuberRegression(LinearRegression):
+    def __init__(self, epsilon: float = 1.35, max_iter: int = 500, tol: float = 1e-4, learning_rate: float = 0.01, *args, **kwargs):
+        super().__init__()
+        if epsilon <= 0:
+            raise ValueError("epsilon must be strictly positive.")
+        self.epsilon = epsilon
+        self.max_iter = max_iter
+        self.tol = tol
+        self.learning_rate = learning_rate
+    
+    def _huber_derivative(self, residuals : np.ndarray) -> np.ndarray:
+        """
+        Compute the derivative of the Huber loss function with respect to the residuals.
+        """
+        inner_mask = np.abs(residuals) <= self.epsilon
+        outer_mask = np.abs(residuals) > self.epsilon
+
+        derivative = np.zeros_like(residuals, dtype=float)
+
+        derivative[inner_mask] = residuals[inner_mask]
+
+        derivative[outer_mask] = self.epsilon * np.sign(residuals[outer_mask])
+
+        return derivative
+    
+    def fit(self, X : np.ndarray, y : np.ndarray) -> "HuberRegression":
+        if y.ndim == 1:
+            y = y.reshape(-1, 1)
+        n_samples, n_features = X.shape
+
+        self.theta = np.zeros((n_features + 1, 1))
+        ones = np.ones((n_samples, 1))
+        X_b = np.hstack((ones, X))
+
+        for iteration in range(self.max_iter):
+            old_theta = self.theta.copy()
+
+            y_pred = X_b @ self.theta
+            residuals = y - y_pred
+            dL_dres = self._huber_derivative(residuals)
+
+            gradient = - (X_b.T @ dL_dres)
+
+            self.theta = self.theta - self.learning_rate * gradient
+
+            theta_change = np.linalg.norm(self.theta - old_theta)
+            if theta_change < self.tol:
+                print(f"HuberRegression converged after {iteration+1} iterations.")
+                break
+        self.intercept_ = self.theta[0, 0]
+        self.coef_ = self.theta[1:, 0]
+
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return super().predict(X)
+    def score(self, X: np.ndarray, y: np.ndarray) -> float:
         return super().score(X, y)

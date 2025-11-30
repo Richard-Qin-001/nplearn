@@ -120,3 +120,76 @@ class MinMaxScaler():
         X_original = X_norm * data_range + self.min_
 
         return X_original
+
+class MaxAbsScaler():
+    """
+    Scale features by dividing by the maximum absolute value of each feature (max(|X|)), 
+    scaling the data to the range [-1, 1]. 
+    This scaler does not shift/center the data.
+    """
+    def __init__(self, *args, **kwargs):
+        self.max_abs_: Optional[np.ndarray] = None
+    
+    def fit(self, X : np.ndarray) -> "MaxAbsScaler":
+        """
+        Compute the maximum absolute value of each feature in the training set X.
+
+        Parameters:
+        X (np.ndarray): The data to be trained.
+
+        Returns:
+        MaxAbsScaler: The object itself.
+        """
+        self.max_abs_ = np.max(np.abs(X), axis=0)
+
+        return self
+    
+    def transform(self, X : np.ndarray) -> np.ndarray:
+        """
+        Scale the data using the calculated max_abs_.
+
+        Parameters:
+        X (np.ndarray): The data to be transformed.
+
+        Returns:
+        np.ndarray: The scaled data.
+        """
+        if self.max_abs_ is None:
+            raise RuntimeError("MaxAbsScaler must be fitted before calling transform.")
+        divisor = np.where(self.max_abs_ < 1e-8, 1.0, self.max_abs_)
+
+        X_scaled = X / divisor
+
+        constant_features = self.max_abs_ < 1e-8
+        X_scaled[:, constant_features] = 0.0
+
+        return X_scaled
+    
+    def fit_transform(self, X : np.ndarray) -> np.ndarray:
+        """
+        First fit on X, then transform X.
+
+        
+        Parameters:
+        X (np.ndarray): The data to be transformed.
+
+        Returns:
+        np.ndarray: The scaled data.
+        """
+        self.fit(X)
+        return self.transform(X)
+    
+    def inverse_transform(self, X_scaled : np.ndarray) -> np.ndarray:
+        """
+        Restore the scaled data back to its original scale.
+
+        Parameters:
+        X_scaled (np.ndarray): The scaled data to be inverse transformed.
+
+        Returns:
+        np.ndarray: The original data
+        """
+        if self.max_abs_ is None:
+            raise RuntimeError("MaxAbsScaler must be fitted before calling inverse_transform.")
+        X_original = X_scaled * self.max_abs_
+        return X_original
