@@ -1,7 +1,8 @@
 import numpy as np
 from typing import Union, Optional, Tuple
+from .base import TransformerMimin, BaseEstimator
 
-class StandardScaler():
+class StandardScaler(BaseEstimator, TransformerMimin):
     def __init__(self, *args, **kwargs):
         self.mean_ : Optional[np.ndarray] = None
         self.scale_ : Optional[np.ndarray] = None
@@ -22,17 +23,13 @@ class StandardScaler():
         X_scaled[:, zero_scale_mask] = 0.0
         return X_scaled
     
-    def fit_transform(self, X : np.ndarray) -> np.ndarray:
-        self.fit(X)
-        return self.transform(X)
-    
     def inverse_transform(self, X_scaled : np.ndarray) -> np.ndarray:
         if self.mean_ is None or self.scale_ is None:
             raise RuntimeError("StandardScaler must be fitted before calling inverse_transform.")
         X_original = X_scaled * self.scale_ + self.mean_
         return X_original
     
-class MinMaxScaler():
+class MinMaxScaler(BaseEstimator, TransformerMimin):
     """
     Scale features to a specified range (default is [0, 1]).
     """
@@ -81,21 +78,8 @@ class MinMaxScaler():
         X_scaled = X_norm * target_range + target_min
         constant_features = (self.max_ - self.min_) < 1e-8
         X_scaled[:, constant_features] = target_min
+
         return X_scaled
-            
-    def fit_transform(self, X : np.ndarray) -> np.ndarray:
-        """
-        First fit on X, then transform X.
-
-        
-        Parameters:
-        X (np.ndarray): The data to be transformed.
-
-        Returns:
-        np.ndarray: The scaled data.
-        """
-        self.fit(X)
-        return self.transform(X)
     
     def inverse_transform(self, X_scaled : np.ndarray) -> np.ndarray:
         """
@@ -121,7 +105,7 @@ class MinMaxScaler():
 
         return X_original
 
-class MaxAbsScaler():
+class MaxAbsScaler(BaseEstimator, TransformerMimin):
     """
     Scale features by dividing by the maximum absolute value of each feature (max(|X|)), 
     scaling the data to the range [-1, 1]. 
@@ -164,20 +148,6 @@ class MaxAbsScaler():
         X_scaled[:, constant_features] = 0.0
 
         return X_scaled
-    
-    def fit_transform(self, X : np.ndarray) -> np.ndarray:
-        """
-        First fit on X, then transform X.
-
-        
-        Parameters:
-        X (np.ndarray): The data to be transformed.
-
-        Returns:
-        np.ndarray: The scaled data.
-        """
-        self.fit(X)
-        return self.transform(X)
     
     def inverse_transform(self, X_scaled : np.ndarray) -> np.ndarray:
         """
