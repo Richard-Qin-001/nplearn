@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Optional, List
-from .base import BaseEstimator, RegressorMimin
+from .base import BaseEstimator, RegressorMixin
 
-class LinearRegression(BaseEstimator, RegressorMimin):
+class LinearRegression(BaseEstimator, RegressorMixin):
     def __init__(self):
         self.theta = None
         self.intercept_ = None

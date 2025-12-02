@@ -1,9 +1,9 @@
 import numpy as np
 
-class MLPClassifier():
+class MLPRegressor():
     pass
 
-class MLPRegressor():
+class MLPClassifier():
     pass
 
 class BernoulliRBM():

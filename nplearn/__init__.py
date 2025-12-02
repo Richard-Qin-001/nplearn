@@ -4,10 +4,10 @@ from .preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from .metrics import mean_squared_error, r2_score
 from .model_selection import train_test_split, KFold
 from .pipeline import Pipeline
-from .base import BaseEstimator, TransformerMimin, RegressorMimin
+from .base import BaseEstimator, TransformerMimin, RegressorMixin
 
 __all__ = [
-    'BaseEstimator', 'TransformerMimin', 'RegressorMimin',
+    'BaseEstimator', 'TransformerMimin', 'RegressorMixin',
     'LinearRegression', 'RidgeRegression', 'LassoRegression', 'ElasticNet', 'HuberRegression',
     'StandardScaler', 'MinMaxScaler', 'MaxAbsScaler',
     'mean_squared_error', 'r2_score',

@@ -42,7 +42,7 @@ class BaseEstimator():
             setattr(self, key, value)
         return self
 class TransformerMimin():
-    def fit_transform(self, X: np.ndarray, y: Optional[np.ndarray] = None, **fit_params: Any) -> np.ndarray:
+    def fit_transform(self, X: np.ndarray, y: Optional[np.ndarray] = None) -> np.ndarray:
         """
         First fit on X, then transform X.
 
@@ -54,12 +54,15 @@ class TransformerMimin():
         np.ndarray: The scaled data.
         """
         if y is not None:
-            return self.fit(X, **fit_params).transform(X, **fit_params)
+            return self.fit(X).transform(X)
         else:
-            return self.fit(X, y, **fit_params).transform(X, **fit_params)
+            return self.fit(X).transform(X)
 
-class RegressorMimin():
-    def score(self, X : np.ndarray, y: np.ndarray) -> float:
+class RegressorMixin():
+    # TODO(1.8): Remove this attribute
+    _estimator_type = "regressor"
+
+    def score(self, X : np.ndarray, y: np.ndarray, sample_weight : np.ndarray = None) -> float:
         from .metrics import r2_score
         y_pred = self.predict(X)
-        return r2_score(y, y_pred)
+        return r2_score(y, y_pred, sample_weight=sample_weight)
